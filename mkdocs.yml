@@ -58,9 +58,6 @@ theme:
 
 # Excludes
 exclude_docs: |
-  /packaging/README.md
-  /packaging/postinstall.sh
-  /packaging/postremove.sh
   /requirements.txt
 
 # Plugins
@@ -107,7 +104,7 @@ extra:
     - icon: fontawesome/brands/discord
       link: https://discord.gg/c84AZQhmpx
   headscale:
-    version: 0.25.0
+    version: 0.26.0
 
 # Extensions
 markdown_extensions:
