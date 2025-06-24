@@ -32,7 +32,7 @@ import (
 	"github.com/oauth2-proxy/mockoidc"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
-	"github.com/puzpuzpuz/xsync/v3"
+	"github.com/puzpuzpuz/xsync/v4"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,7 +47,6 @@ const (
 )
 
 var usePostgresForTest = envknob.Bool("HEADSCALE_INTEGRATION_POSTGRES")
-var usePolicyV1ForTest = envknob.Bool("HEADSCALE_POLICY_V1")
 
 var (
 	errNoHeadscaleAvailable = errors.New("no headscale available")
@@ -412,10 +411,6 @@ func (s *Scenario) Headscale(opts ...hsic.Option) (ControlServer, error) {
 
 	if usePostgresForTest {
 		opts = append(opts, hsic.WithPostgres())
-	}
-
-	if usePolicyV1ForTest {
-		opts = append(opts, hsic.WithPolicyV1())
 	}
 
 	headscale, err := hsic.New(s.pool, s.Networks(), opts...)
@@ -847,6 +842,7 @@ func (s *Scenario) runHeadscaleRegister(userStr string, body string) error {
 		return errParseAuthPage
 	}
 	key := keySep[1]
+	key = strings.SplitN(key, " ", 2)[0]
 	log.Printf("registering node %s", key)
 
 	if headscale, err := s.Headscale(); err == nil {
@@ -1106,6 +1102,7 @@ func (s *Scenario) runMockOIDC(accessTTL time.Duration, users []mockoidc.MockUse
 		},
 	}
 
+
 	headscaleBuildOptions := &dockertest.BuildOptions{
 		Dockerfile: hsic.IntegrationTestDockerFileName,
 		ContextDir: dockerContextPath,
@@ -1118,6 +1115,9 @@ func (s *Scenario) runMockOIDC(accessTTL time.Duration, users []mockoidc.MockUse
 
 	s.mockOIDC = scenarioOIDC{}
 
+	// Add integration test labels if running under hi tool
+	dockertestutil.DockerAddIntegrationLabels(mockOidcOptions, "oidc")
+	
 	if pmockoidc, err := s.pool.BuildAndRunWithBuildOptions(
 		headscaleBuildOptions,
 		mockOidcOptions,
@@ -1201,6 +1201,9 @@ func Webservice(s *Scenario, networkName string) (*dockertest.Resource, error) {
 		Networks: []*dockertest.Network{network},
 		Env:      []string{},
 	}
+
+	// Add integration test labels if running under hi tool
+	dockertestutil.DockerAddIntegrationLabels(webOpts, "web")
 
 	webBOpts := &dockertest.BuildOptions{
 		Dockerfile: hsic.IntegrationTestDockerFileName,

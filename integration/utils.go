@@ -3,17 +3,22 @@ package integration
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
+	"net/netip"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
+	"github.com/cenkalti/backoff/v5"
+	policyv2 "github.com/juanfont/headscale/hscontrol/policy/v2"
 	"github.com/juanfont/headscale/hscontrol/util"
 	"github.com/juanfont/headscale/integration/tsic"
 	"github.com/stretchr/testify/assert"
+	"tailscale.com/tailcfg"
+	"tailscale.com/types/ptr"
 )
 
 const (
@@ -306,20 +311,18 @@ func assertValidNetcheck(t *testing.T, client TailscaleClient) {
 func assertCommandOutputContains(t *testing.T, c TailscaleClient, command []string, contains string) {
 	t.Helper()
 
-	err := backoff.Retry(func() error {
+	_, err := backoff.Retry(context.Background(), func() (struct{}, error) {
 		stdout, stderr, err := c.Execute(command)
 		if err != nil {
-			return fmt.Errorf("executing command, stdout: %q stderr: %q, err: %w", stdout, stderr, err)
+			return struct{}{}, fmt.Errorf("executing command, stdout: %q stderr: %q, err: %w", stdout, stderr, err)
 		}
 
 		if !strings.Contains(stdout, contains) {
-			return fmt.Errorf("executing command, expected string %q not found in %q", contains, stdout)
+			return struct{}{}, fmt.Errorf("executing command, expected string %q not found in %q", contains, stdout)
 		}
 
-		return nil
-	}, backoff.NewExponentialBackOff(
-		backoff.WithMaxElapsedTime(10*time.Second)),
-	)
+		return struct{}{}, nil
+	}, backoff.WithBackOff(backoff.NewExponentialBackOff()), backoff.WithMaxElapsedTime(10*time.Second))
 
 	assert.NoError(t, err)
 }
@@ -419,10 +422,76 @@ func countMatchingLines(in io.Reader, predicate func(string) bool) (int, error) 
 // 				return peer
 // 			}
 // 		}
-// 	}
+// }
 //
 // 	return nil
 // }
+
+// Helper functions for creating typed policy entities
+
+// wildcard returns a wildcard alias (*).
+func wildcard() policyv2.Alias {
+	return policyv2.Wildcard
+}
+
+// usernamep returns a pointer to a Username as an Alias.
+func usernamep(name string) policyv2.Alias {
+	return ptr.To(policyv2.Username(name))
+}
+
+// hostp returns a pointer to a Host.
+func hostp(name string) policyv2.Alias {
+	return ptr.To(policyv2.Host(name))
+}
+
+// groupp returns a pointer to a Group as an Alias.
+func groupp(name string) policyv2.Alias {
+	return ptr.To(policyv2.Group(name))
+}
+
+// tagp returns a pointer to a Tag as an Alias.
+func tagp(name string) policyv2.Alias {
+	return ptr.To(policyv2.Tag(name))
+}
+
+// prefixp returns a pointer to a Prefix from a CIDR string.
+func prefixp(cidr string) policyv2.Alias {
+	prefix := netip.MustParsePrefix(cidr)
+	return ptr.To(policyv2.Prefix(prefix))
+}
+
+// aliasWithPorts creates an AliasWithPorts structure from an alias and ports.
+func aliasWithPorts(alias policyv2.Alias, ports ...tailcfg.PortRange) policyv2.AliasWithPorts {
+	return policyv2.AliasWithPorts{
+		Alias: alias,
+		Ports: ports,
+	}
+}
+
+// usernameOwner returns a Username as an Owner for use in TagOwners.
+func usernameOwner(name string) policyv2.Owner {
+	return ptr.To(policyv2.Username(name))
+}
+
+// groupOwner returns a Group as an Owner for use in TagOwners.
+func groupOwner(name string) policyv2.Owner {
+	return ptr.To(policyv2.Group(name))
+}
+
+// usernameApprover returns a Username as an AutoApprover.
+func usernameApprover(name string) policyv2.AutoApprover {
+	return ptr.To(policyv2.Username(name))
+}
+
+// groupApprover returns a Group as an AutoApprover.
+func groupApprover(name string) policyv2.AutoApprover {
+	return ptr.To(policyv2.Group(name))
+}
+
+// tagApprover returns a Tag as an AutoApprover.
+func tagApprover(name string) policyv2.AutoApprover {
+	return ptr.To(policyv2.Tag(name))
+}
 //
 // // findPeerByHostname takes a hostname and a map of peers from status.Peer, and returns a *ipnstate.PeerStatus
 // // if there is a peer with the given hostname. If no peer is found, nil is returned.
