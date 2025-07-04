@@ -194,6 +194,7 @@ type DERPConfig struct {
 	ServerRegionCode                   string
 	ServerRegionName                   string
 	ServerPrivateKeyPath               string
+	ServerVerifyClients                bool
 	STUNAddr                           string
 	URLs                               []url.URL
 	Paths                              []string
@@ -334,6 +335,10 @@ func LoadConfig(path string, isFile bool) error {
 	viper.SetDefault("prefixes.allocation", string(IPAllocationStrategySequential))
 
 	if err := viper.ReadInConfig(); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			log.Warn().Msg("No config file found, using defaults")
+			return nil
+		}
 		return fmt.Errorf("fatal error reading config file: %w", err)
 	}
 
@@ -387,7 +392,7 @@ func validateServerConfig() error {
 		errorText += "Fatal config error: set either tls_letsencrypt_hostname or tls_cert_path/tls_key_path, not both\n"
 	}
 
-	if !viper.IsSet("noise") || viper.GetString("noise.private_key_path") == "" {
+	if viper.GetString("noise.private_key_path") == "" {
 		errorText += "Fatal config error: headscale now requires a new `noise.private_key_path` field in the config file for the Tailscale v2 protocol\n"
 	}
 
@@ -458,6 +463,7 @@ func derpConfig() DERPConfig {
 	serverRegionID := viper.GetInt("derp.server.region_id")
 	serverRegionCode := viper.GetString("derp.server.region_code")
 	serverRegionName := viper.GetString("derp.server.region_name")
+	serverVerifyClients := viper.GetBool("derp.server.verify_clients")
 	stunAddr := viper.GetString("derp.server.stun_listen_addr")
 	privateKeyPath := util.AbsolutePathFromConfigPath(
 		viper.GetString("derp.server.private_key_path"),
@@ -502,6 +508,7 @@ func derpConfig() DERPConfig {
 		ServerRegionID:                     serverRegionID,
 		ServerRegionCode:                   serverRegionCode,
 		ServerRegionName:                   serverRegionName,
+		ServerVerifyClients:                serverVerifyClients,
 		ServerPrivateKeyPath:               privateKeyPath,
 		STUNAddr:                           stunAddr,
 		URLs:                               urls,

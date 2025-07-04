@@ -23,15 +23,14 @@ provides on overview of Headscale's feature and compatibility with the Tailscale
 - [x] Access control lists ([GitHub label "policy"](https://github.com/juanfont/headscale/labels/policy%20%F0%9F%93%9D))
     - [x] ACL management via API
     - [x] Some [Autogroups](https://tailscale.com/kb/1396/targets#autogroups), currently: `autogroup:internet`,
-      `autogroup:nonroot`
+      `autogroup:nonroot`, `autogroup:member`, `autogroup:tagged`
     - [x] [Auto approvers](https://tailscale.com/kb/1337/acl-syntax#auto-approvers) for [subnet
       routers](../ref/routes.md#automatically-approve-routes-of-a-subnet-router) and [exit
       nodes](../ref/routes.md#automatically-approve-an-exit-node-with-auto-approvers)
     - [x] [Tailscale SSH](https://tailscale.com/kb/1193/tailscale-ssh)
-* [ ] Node registration using Single-Sign-On (OpenID Connect) ([GitHub label "OIDC"](https://github.com/juanfont/headscale/labels/OIDC))
+* [x] [Node registration using Single-Sign-On (OpenID Connect)](../ref/oidc.md) ([GitHub label "OIDC"](https://github.com/juanfont/headscale/labels/OIDC))
     - [x] Basic registration
     - [x] Update user profile from identity provider
-    - [ ] Dynamic ACL support
     - [ ] OIDC groups cannot be used in ACLs
 - [ ] [Funnel](https://tailscale.com/kb/1223/funnel) ([#1040](https://github.com/juanfont/headscale/issues/1040))
 - [ ] [Serve](https://tailscale.com/kb/1312/serve) ([#1234](https://github.com/juanfont/headscale/issues/1921))
